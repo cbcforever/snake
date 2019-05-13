@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>eat</title>
+<!-- 自定制样式文件 -->
+<link rel="stylesheet" href="./背景样式_files/cnblog.min.css">
+<!-- 背景动画 -->
+<canvas id="c_n9" width="1920" height="990" style="position: fixed; top: 0px; left: 0px; z-index: -1; opacity: 0.5;"></canvas>
+<script src="./背景样式_files/canvas-nest.min.js.下载"></script>
+<canvas id="c_n1" width="1536" height="754" style="position: fixed; top: 0px; left: 0px; z-index: -1; opacity: 0.5;"></canvas>
+<canvas id="c_n8" width="1229" height="564" style="position: fixed; top: 0px; left: 0px; z-index: -1; opacity: 0.5;"></canvas>
+<style>
+	.block{
+		width: 18px;
+		height:18px;
+		border: 1px solid #ccc;
+		float: left;
+	}
+</style>
+</head>
+<body>
+<div id="info"></div>
+<div id="snake"></div>
+<button onclick="history.go(0)" >重玩</button>
+<span id="aaa"></span>
+<script>
+
+	var  mapWitch = 20;
+	var  mapHight = 20;
+	var allBlocks = [];
+	var foods = [];
+	var foodcount = 50;
+	var snakes = [];//所有蛇的书记胡
+
+	//全局的方向
+	var direction = 37;
+	var LEFT = 37;
+	var UP = 38;
+	var RIGHT =39;
+	var DOWN = 40;
+	//记录定时器变量
+	var timer;
+
+	//控制速度选项
+	var speed = 10;
+	var speedCount = 0;
+	//创建一个地图
+	var tempHtml = "";
+	for (var i = 0; i < mapWitch*mapHight; i++) {
+		 tempHtml = tempHtml +'<div class="block"></div>';
+	}
+	document.getElementById("snake").innerHTML = tempHtml;
+	//通过限制的容器的宽度保证每行有20个格子
+	document.getElementById("snake").style.width = mapWitch*20+"px";
+
+	allBlocks = document.getElementById("snake").getElementsByTagName("div");
+	console.log(allBlocks.length);
+	//随机生成食物
+		//对于数据而言,根本不存在行列,只有显示存在
+		//从400个格子中选择不同的50个
+		foods = new Array(mapHight*mapWitch);
+		var tempFoodsIndex = [];
+		for(i=0;i<50;i++){
+			var index = Math.round(Math.random()*allBlocks.length);
+			if (tempFoodsIndex.indexOf(index)==-1) {
+				//说明数据中没有这个缩影
+				tempFoodsIndex.push(index);
+				foods[index] = 1;
+			}else{
+				i--;
+			}
+			
+		}
+	//显示食物
+	for (var i = 0; i < foods.length; i++) {
+		if(foods[i]){
+			//只要是非0非空非null非undifind,if就是成立的
+		allBlocks[i].style.backgroundColor="#ff0";
+		}
+	}
+	//蛇的数据结构的构建:关键 
+	snakes = [{x:15,y:0},{x:16,y:0},{x:17,y:0},{x:18,y:0},{x:19,y:0}];
+	showAll();
+	//显示出蛇
+		//行和列的关系:x和y的坐标,怎么确定allBlocks中是第几个?
+		//var index = x + y*mapWidth;
+		/*
+		改函数负责更新显示
+		 */
+		function showAll(){
+			//清空原来的显示
+			for (var i = 0; i < allBlocks.length; i++) {
+				allBlocks[i].style.backgroundColor="";
+			}
+			//显示食物
+			for (var i = 0; i < foods.length; i++) {
+				if(foods[i]){
+					//只要是非0非空非null非undifind,if就是成立的
+				allBlocks[i].style.backgroundColor="#ff0";
+				}
+			}
+			
+		
+		for (var i = 0; i < snakes.length; i++) {
+			if(snakes[i].x<0||snakes[i].x>mapWitch || snakes[i].y<0 || snakes[i].y>mapHight){
+				continue;
+			}
+			var index = snakes[i].x + snakes[i].y * mapWitch;
+			allBlocks[index].style.backgroundColor= i==0?"#00f":"#f00";
+		}
+	}
+	//把蛇动起来啊,相应键盘事件
+		//直接向左边移动:所有数据的x坐标都减少1;
+		function moveSnake(){
+			var nextPos = {};//保存下一步第一个元素应该移动的位置
+			//每一次第移动的本质都是第一个元素按照新的方向进入下一个单元格
+			if(speedCount++ % speed!=0){
+				return;
+			}
+			if(direction==LEFT){
+				nextPos.x = snakes[0].x - 1;
+				nextPos.y = snakes[0].y;
+			}else if(direction==RIGHT){
+				nextPos.x = snakes[0].x + 1;
+				nextPos.y = snakes[0].y;
+			}else if (direction==UP) {
+				nextPos.x = snakes[0].x;
+				nextPos.y = snakes[0].y-1;
+			}else if(direction=DOWN){
+				nextPos.x = snakes[0].x;
+				nextPos.y = snakes[0].y+1;
+			}
+
+			//判断是否撞墙
+			if(nextPos.x<0 || nextPos.y<0 || nextPos.x >= mapWitch || nextPos.y >= mapHight){
+				clearInterval(timer);
+				alert("撞墙了");
+				return;
+			}
+			//判断自己是否咬到自己;如果下一个位置数据和自己的snakes数据有任何节点是相同的
+			for (var i = 0; i < snakes.length; i++) {
+				if(snakes[i].x == nextPos.x && snakes[i].y == nextPos.y){
+					clearInterval(timer);
+					alert("撞到自己了");
+					return;
+				}
+			}
+
+			//吃东西的逻辑:判断下一个位置是不是食物
+			var index = nextPos.x + nextPos.y*mapWitch;
+			if(foods[index]){
+				//如果吃到了东西,暂停消化(将新的位置变成自己第一个元素)
+				snakes.unshift(nextPos);
+				//标记当前位置的食物已被吃掉
+				foods[index] = null;
+
+				//吃到食物后检测是否需要提速
+				speed = Math.round((55 - snakes.length)/5);//注释此行代码不计速度
+				console.log(speed);
+				document.getElementById("aaa").innerHTML = snakes.length;
+				if(snakes.length==55){
+					clearInterval(timer);
+					alert("胜利");
+					return;
+				}
+			}else{
+				for (var i = snakes.length-1; i >=1; i--) {
+				snakes[i].x = snakes[i-1].x;
+				snakes[i].y = snakes[i-1].y;
+			}
+			//把更新的元素的位置赋给第一个
+			snakes[0].x = nextPos.x;
+			snakes[0].y = nextPos.y;
+			}
+			
+			showAll();
+		}
+	//速度如何递增
+	
+	//如何判断自己咬到自己
+	
+	//修饰
+	window.onkeydown = function(evt){
+		if(!evt){
+			evt = window.event;
+		}
+		if(evt.keyCode>=37 && evt.keyCode<=40){
+			direction = evt.keyCode;
+		}
+	}
+	timer = setInterval("moveSnake()",50);
+	function changeDirection(){
+		direction = direction + 1;
+		if (direction==41) {
+			direction = 37;
+		}
+	}
+	
+</script>
+</body>
+</html>
